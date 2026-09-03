@@ -1,8 +1,9 @@
 # systemd unit for the gunicorn app server.
 # Install:  sudo cp deploy/grd-backend.service /etc/systemd/system/
 #           sudo systemctl daemon-reload && sudo systemctl enable --now grd-backend
-# Assumes the repo lives at /opt/grd_backend with a venv at /opt/grd_backend/.venv
-# and a filled-in /opt/grd_backend/.env  (adjust paths/User below to match).
+#
+# Assumes:  repo at /home/webadm/grd_backend, venv at .venv, filled-in .env,
+#           running as the webadm user. Adjust all four if your layout differs.
 
 [Unit]
 Description=grd_backend (Gunicorn)
@@ -11,22 +12,20 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-User=www-data
-Group=www-data
-WorkingDirectory=/opt/grd_backend
-EnvironmentFile=/opt/grd_backend/.env
+User=webadm
+Group=webadm
+WorkingDirectory=/home/webadm/grd_backend
+EnvironmentFile=/home/webadm/grd_backend/.env
 RuntimeDirectory=grd-backend
 RuntimeDirectoryMode=0755
-ExecStart=/opt/grd_backend/.venv/bin/gunicorn -c gunicorn.conf.py config.wsgi:application
+ExecStart=/home/webadm/grd_backend/.venv/bin/gunicorn -c gunicorn.conf.py config.wsgi:application
 ExecReload=/bin/kill -s HUP $MAINPID
 Restart=on-failure
 RestartSec=3
 
-# Hardening
+# Light hardening (kept loose because the app lives under /home)
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=full
-ProtectHome=true
 
 [Install]
 WantedBy=multi-user.target

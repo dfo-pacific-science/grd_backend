@@ -129,8 +129,15 @@ fetch(`${API}/api/auth/me/`, {
 
 Set `CORS_ALLOWED_ORIGINS` in `.env` to your frontend origin(s).
 
-## Production notes
+## Production / deployment
 
-- Set `DJANGO_DEBUG=False`, a real `DJANGO_SECRET_KEY`, and `DJANGO_ALLOWED_HOSTS`.
-- Serve with `gunicorn config.wsgi` behind a reverse proxy.
-- Run `python manage.py collectstatic` for the admin's static files.
+Full walkthrough for the LXD container in [deploy/README.md](deploy/README.md).
+In short:
+
+- Set `DJANGO_DEBUG=False`, a real `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
+  and `DJANGO_CSRF_TRUSTED_ORIGINS` / `CORS_ALLOWED_ORIGINS`.
+- `gunicorn -c gunicorn.conf.py config.wsgi:application` under systemd
+  ([deploy/grd-backend.service](deploy/grd-backend.service)), nginx in front
+  ([deploy/nginx.conf](deploy/nginx.conf)).
+- `python manage.py collectstatic` — WhiteNoise then serves the admin's static
+  files from gunicorn (no nginx filesystem access needed).

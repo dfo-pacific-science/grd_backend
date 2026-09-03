@@ -3,9 +3,9 @@
 import multiprocessing
 import os
 
-# Bind to a Unix socket by default (nginx talks to it); override with GUNICORN_BIND
-# e.g. GUNICORN_BIND=0.0.0.0:8000 to expose it directly.
-bind = os.getenv("GUNICORN_BIND", "unix:/run/grd-backend/gunicorn.sock")
+# Listen on a TCP port by default; set GUNICORN_BIND to a
+# "unix:/run/grd-backend/gunicorn.sock" path if something proxies it instead.
+bind = os.getenv("GUNICORN_BIND", "0.0.0.0:8000")
 
 workers = int(os.getenv("GUNICORN_WORKERS", str(multiprocessing.cpu_count() * 2 + 1)))
 worker_class = "sync"

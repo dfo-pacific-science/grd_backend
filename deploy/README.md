@@ -1,29 +1,34 @@
-# Deploying grd_backend on an LXD container
+# Deploying grd_backend on the LXD container
 
-The container is just Ubuntu — a normal gunicorn + systemd + nginx Django
-deploy. The database is remote (`ci-bc-eos-db-1…` in `.env`), so nothing
-Postgres runs in the container; it only needs network access to that host.
+The container (`ci-bc-eos-1`) is just Ubuntu. This runs gunicorn under systemd,
+bound directly to a **TCP port** — no nginx. The database is remote
+(`ci-bc-eos-db-1…` in `.env`), so nothing Postgres runs in the container; it
+only needs network access to that host. Static files (the Django admin's
+CSS/JS) are served by WhiteNoise from inside gunicorn.
 
-Paths below assume the repo at **`/opt/grd_backend`**. Adjust to taste.
+Assumptions:
+
+| | |
+| --- | --- |
+| repo path | `/home/webadm/grd_backend` |
+| run as user | `webadm` |
+| virtualenv | `/home/webadm/grd_backend/.venv` |
+| listen | `0.0.0.0:8000` (set by `GUNICORN_BIND` in `.env`) |
 
 ---
 
-## 1. One-time system setup (inside the container)
+## 1. System packages
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip nginx git
-
-# move the clone into place (or clone straight there)
-sudo mkdir -p /opt/grd_backend
-sudo chown "$USER":"$USER" /opt/grd_backend
-git clone https://github.com/dfo-pacific-science/grd_backend.git /opt/grd_backend
-cd /opt/grd_backend
+sudo apt install -y python3 python3-venv python3-pip
+python3 --version        # must be >= 3.10
 ```
 
 ## 2. Python environment
 
 ```bash
+cd ~/grd_backend
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -r requirements.txt
@@ -31,23 +36,23 @@ python3 -m venv .venv
 
 ## 3. Environment file
 
-`.env` is git-ignored — create it on the server. Start from the example:
+`.env` is git-ignored — create it on the container:
 
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Production values that matter:
+Values that matter here:
 
 ```ini
 DJANGO_DEBUG=False
-DJANGO_SECRET_KEY=<64+ random chars — see below>
-DJANGO_ALLOWED_HOSTS=<container hostname>,<domain>,127.0.0.1
-DJANGO_CSRF_TRUSTED_ORIGINS=https://<domain>
-CORS_ALLOWED_ORIGINS=https://<your Next.js origin>
+DJANGO_HTTPS=False                       # plain HTTP on the port
+DJANGO_SECRET_KEY=<64+ random chars — command below>
+DJANGO_ALLOWED_HOSTS=ci-bc-eos-1,<lxd-host ip/name>,127.0.0.1,localhost
+DJANGO_CSRF_TRUSTED_ORIGINS=http://<host>:8000
+CORS_ALLOWED_ORIGINS=http://<your Next.js origin>
 
-# database — same block you used locally
 POSTGRES_DB=grd-dev-3.1
 POSTGRES_USER=...
 POSTGRES_PASSWORD=...
@@ -56,93 +61,104 @@ POSTGRES_PORT=5432
 POSTGRES_SSLMODE=require
 POSTGRES_SEARCH_PATH=public,grd,grd_ref,grd_validation
 
-# behind nginx on the same host
-GUNICORN_BIND=unix:/run/grd-backend/gunicorn.sock
+GUNICORN_BIND=0.0.0.0:8000
 ```
 
-Generate a secret key:
+Secret key:
 
 ```bash
 .venv/bin/python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
 ```
 
+Check the DB is reachable from the container:
+
+```bash
+nc -vz "$POSTGRES_HOST" 5432
+```
+
 ## 4. Migrate + collect static
 
 ```bash
-.venv/bin/python manage.py migrate           # creates auth/session/admin tables
+.venv/bin/python manage.py migrate            # Django's own tables only
 .venv/bin/python manage.py collectstatic --noinput
 .venv/bin/python manage.py createsuperuser    # optional, for /admin/
 ```
 
-> The `grd*` apps are `managed = False`, so `migrate` only touches Django's own
-> tables. If this container points at the **same** database you already
-> migrated locally, `migrate` is a no-op — that's fine.
+> The `grd*` apps are `managed = False`; `migrate` never touches those tables.
+> Pointed at the same DB you migrated locally, `migrate` is a no-op — expected.
 
-## 5. Gunicorn service
+## 5. Run it
+
+**Quick test (foreground):**
+
+```bash
+.venv/bin/gunicorn -c gunicorn.conf.py config.wsgi:application
+# -> http://<host>:8000/api/health/
+```
+
+**As a service:**
 
 ```bash
 sudo cp deploy/grd-backend.service /etc/systemd/system/
-# the unit runs as www-data — let it read the repo + write the socket dir
-sudo chown -R www-data:www-data /opt/grd_backend
 sudo systemctl daemon-reload
 sudo systemctl enable --now grd-backend
-sudo systemctl status grd-backend
+systemctl status grd-backend
 ```
 
 Logs: `journalctl -u grd-backend -f`
 
-## 6. nginx
+## 6. Verify
 
 ```bash
-sudo cp deploy/nginx.conf /etc/nginx/sites-available/grd-backend
-sudo ln -sf /etc/nginx/sites-available/grd-backend /etc/nginx/sites-enabled/grd-backend
-sudo rm -f /etc/nginx/sites-enabled/default
-# edit server_name in the file first
-sudo nginx -t && sudo systemctl reload nginx
+curl -s http://localhost:8000/api/health/
+curl -s http://localhost:8000/api/reports/options/species
+curl -s -I http://localhost:8000/static/admin/css/base.css   # 200 via WhiteNoise
 ```
 
-## 7. Verify
+## 7. Reach it from outside the container
+
+Run on the **LXD host** (not inside):
 
 ```bash
-curl -s http://localhost/api/health/            # {"status": "ok"}
-curl -s http://localhost/api/reports/options/species
+lxc config device add ci-bc-eos-1 grd-http proxy \
+  listen=tcp:0.0.0.0:8000 connect=tcp:127.0.0.1:8000
 ```
 
-From outside, hit the container's IP / the LXD proxy device you forward to it.
+API then at `http://<lxd-host>:8000/`. Point the frontend's
+`NEXT_PUBLIC_API_URL` there and add that origin to `CORS_ALLOWED_ORIGINS`
+and the host to `DJANGO_ALLOWED_HOSTS`.
 
 ---
 
 ## Updating after a push
 
 ```bash
-cd /opt/grd_backend
-sudo -u www-data git pull
+cd ~/grd_backend
+git pull
 .venv/bin/pip install -r requirements.txt          # if it changed
 .venv/bin/python manage.py migrate                 # if migrations changed
 .venv/bin/python manage.py collectstatic --noinput # if static changed
 sudo systemctl restart grd-backend
 ```
 
-## Exposing the container (on the LXD host)
+---
 
-Forward a host port to the container, e.g.:
+## Later: putting TLS in front
 
-```bash
-lxc config device add grd-backend http proxy \
-  listen=tcp:0.0.0.0:8080 connect=tcp:127.0.0.1:80
-```
-
-Then the API is at `http://<lxd-host>:8080/`. Point `NEXT_PUBLIC_API_URL` there
-(and add that origin to `CORS_ALLOWED_ORIGINS` / `DJANGO_ALLOWED_HOSTS`).
+Add nginx (or use the LXD host's proxy) to terminate HTTPS, point it at
+`127.0.0.1:8000`, then set `DJANGO_HTTPS=True` in `.env` and restart. A sample
+`deploy/nginx.conf` is included for when you get there.
 
 ---
 
 ## Checklist
 
-- [ ] `DJANGO_DEBUG=False` and a real `DJANGO_SECRET_KEY`
-- [ ] `DJANGO_ALLOWED_HOSTS` includes the hostname/domain you'll hit
-- [ ] `DJANGO_CSRF_TRUSTED_ORIGINS` + `CORS_ALLOWED_ORIGINS` set to the frontend URL
-- [ ] DB reachable from the container (`.venv/bin/python manage.py dbshell` or `nc -vz $POSTGRES_HOST 5432`)
-- [ ] `collectstatic` run so `/admin/` has its CSS
-- [ ] `systemctl status grd-backend` active, `nginx -t` passes
-- [ ] decide auth on `reports/` (`AllowAny` today — see `reports/README.md`)
+- [ ] `python3 --version` ≥ 3.10
+- [ ] `DJANGO_DEBUG=False`, `DJANGO_HTTPS=False`, real `DJANGO_SECRET_KEY`
+- [ ] `DJANGO_ALLOWED_HOSTS` has every name/IP you'll hit the API by
+- [ ] `CORS_ALLOWED_ORIGINS` = the frontend URL
+- [ ] `nc -vz $POSTGRES_HOST 5432` succeeds from the container
+- [ ] `collectstatic` run
+- [ ] `systemctl status grd-backend` active
+- [ ] LXD host `proxy` device forwards the port
+- [ ] auth decision on `reports/` (`AllowAny` today — see `reports/README.md`)
