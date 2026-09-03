@@ -4,6 +4,8 @@ All columns are writable except `projects.sha256`, surfaced as a read-only hex
 string (a NOT NULL binary column owned by the ingestion pipeline).
 """
 
+from __future__ import annotations
+
 from rest_framework import serializers
 
 from . import models
