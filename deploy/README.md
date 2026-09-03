@@ -19,11 +19,15 @@ Assumptions:
 
 ## 1. System packages
 
+Usually already on the container. Check first:
+
 ```bash
-sudo apt update
-sudo apt install -y python3 python3-venv python3-pip
 python3 --version        # must be >= 3.10
+python3 -m venv --help >/dev/null && echo "venv ok"
 ```
+
+Only if something's missing (needs an admin):
+`sudo apt install -y python3 python3-venv python3-pip`
 
 ## 2. Python environment
 
@@ -96,16 +100,24 @@ nc -vz "$POSTGRES_HOST" 5432
 # -> http://<host>:8000/api/health/
 ```
 
-**As a service:**
+**As a service (user-level systemd — no sudo):**
 
 ```bash
-sudo cp deploy/grd-backend.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now grd-backend
-systemctl status grd-backend
+mkdir -p ~/.config/systemd/user
+cp deploy/grd-backend.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now grd-backend
+systemctl --user status grd-backend
 ```
 
-Logs: `journalctl -u grd-backend -f`
+Keep it running after you log out (once; may need an admin to run it):
+
+```bash
+loginctl enable-linger $USER        # or: sudo loginctl enable-linger webadm
+```
+
+Logs: `journalctl --user -u grd-backend -f`
+Restart / stop: `systemctl --user restart|stop grd-backend`
 
 ## 6. Verify
 
@@ -138,7 +150,7 @@ git pull
 .venv/bin/pip install -r requirements.txt          # if it changed
 .venv/bin/python manage.py migrate                 # if migrations changed
 .venv/bin/python manage.py collectstatic --noinput # if static changed
-sudo systemctl restart grd-backend
+systemctl --user restart grd-backend
 ```
 
 ---
@@ -159,6 +171,7 @@ Add nginx (or use the LXD host's proxy) to terminate HTTPS, point it at
 - [ ] `CORS_ALLOWED_ORIGINS` = the frontend URL
 - [ ] `nc -vz $POSTGRES_HOST 5432` succeeds from the container
 - [ ] `collectstatic` run
-- [ ] `systemctl status grd-backend` active
+- [ ] `systemctl --user status grd-backend` active
+- [ ] `loginctl enable-linger` so it survives logout
 - [ ] LXD host `proxy` device forwards the port
 - [ ] auth decision on `reports/` (`AllowAny` today — see `reports/README.md`)
