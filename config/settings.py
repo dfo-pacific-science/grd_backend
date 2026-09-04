@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "django_filters",
     "corsheaders",
     "drf_spectacular",
+    "drf_spectacular_sidecar",  # bundles Swagger/Redoc UI assets as local static files
     # Local
     "accounts",
     "grd",
@@ -169,6 +170,11 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Backend API for the grd Next.js frontend.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Serve Swagger/Redoc's JS/CSS from local static files (WhiteNoise) instead
+    # of a CDN — /api/docs/ must work with no outbound internet access.
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
 }
 
 
