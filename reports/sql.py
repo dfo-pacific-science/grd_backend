@@ -222,7 +222,7 @@ REPORTS = {
           p.baseline_file, p.attributes
         """,
         "from": " FROM grd.projects p LEFT JOIN grd_ref.species_ref s ON s.id = p.species_id ",
-        "kind": "projects",
+        "kind": "none",
         "flatten": "attributes",  # applied on /download only
     },
     "sampleCollections": {
@@ -241,6 +241,18 @@ REPORTS = {
         "from": CORE_FROM_COLLECTIONS + _STOCK_PROPORTION_FROM,
         "kind": "collections",
         "flatten_always": "repunit_estimates",  # applied on every response
+    },
+    "dataLoad": {
+        "select": """
+          fv.original_filename AS file_name, fv.grd_data_loaded AS data_loaded,
+          fv.issue_indiv_list, fv.issue_inventories_list
+        """,
+        "from": """
+          FROM grd_validation.file_versions fv
+          LEFT JOIN grd.projects p ON fv.sha256_checksum = p.sha256
+          LEFT JOIN grd_ref.species_ref s ON s.id = p.species_id
+        """,
+        "kind": "none",
     },
 }
 
@@ -275,7 +287,7 @@ def run_report(name: str, params: dict, *, download: bool = False):
         where, sql_params = where_collections(
             params["filter"], params["years"], params["sample_codes"]
         )
-    else:  # projects — sort only
+    else:  # kind == "none" (projects, dataLoad) — sort only, no filters
         where, sql_params = "", []
 
     from_sql = spec["from"]

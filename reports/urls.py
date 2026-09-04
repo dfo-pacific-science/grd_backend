@@ -18,6 +18,8 @@ urlpatterns = [
     path("sampleCollections/download", views.sample_collections_download),
     path("stockProportionEstimates", views.stock_proportion_estimates),
     path("stockProportionEstimates/download", views.stock_proportion_estimates_download),
+    path("dataLoad", views.data_load),
+    path("dataLoad/download", views.data_load_download),
     # filter-option lookups
     path("options/species", views.options_species),
     path("options/idSources", views.options_id_sources),

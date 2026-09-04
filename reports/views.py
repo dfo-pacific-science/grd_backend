@@ -84,6 +84,7 @@ sample_collections, sample_collections_download = _make_views("sampleCollections
 stock_proportion_estimates, stock_proportion_estimates_download = _make_views(
     "stockProportionEstimates"
 )
+data_load, data_load_download = _make_views("dataLoad")
 
 
 @_array_schema
