@@ -191,6 +191,8 @@ REPORTS = {
         """,
         "from": CORE_FROM_INDIVIDUALS
         + " LEFT JOIN grd.individuals_pbt ipbt ON ipbt.individuals_id = i.id ",
+        # ipbt is unused in select or where, but is joined to match the original query
+        # suggest removing it if not needed, as it may slow down the query
         "kind": "individuals",
     },
     "scBDWRDNA": {
