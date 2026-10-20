@@ -171,7 +171,7 @@ _STOCK_PROPORTION_FROM = """
 REPORTS = {
     "individuals": {
         "select": """
-          p.original_filename, i.indiv, i.mgl_pid, i.mgl_pid_batch, i.projects_id,
+          p.original_filename AS workbook, i.indiv, i.mgl_pid, i.mgl_pid_batch,
           spec.value AS species, t.sample_collection, i.catch_year, i.catch_date,
           i.catch_date_2, i.id_source, i.top_collection, i.top_collection_probability,
           sex_id, sex_note
@@ -182,12 +182,12 @@ REPORTS = {
     },
     "bsciDNAResults": {
         "select": """
-          i.id, i.indiv AS indiv_id, spec.value AS species, spec.id AS species_id,
+          i.indiv AS indiv_id, spec.value AS species,
           i.sex_id AS sex, i.top_collection AS stock_final,
           i.top_collection_probability AS "top_collection_probability(%%)",
           CASE WHEN i.top_collection_probability > 50 THEN i.top_collection ELSE NULL END AS "STOCK_OVER50",
           i.catch_year, i.id_source, t.sample_collection,
-          p.original_filename AS analysis_file, p.baseline_file AS baseline
+          p.original_filename AS workbook, p.baseline_file AS baseline
         """,
         "from": CORE_FROM_INDIVIDUALS
         + " LEFT JOIN grd.individuals_pbt ipbt ON ipbt.individuals_id = i.id ",
@@ -197,7 +197,7 @@ REPORTS = {
     },
     "scBDWRDNA": {
         "select": """
-          i.id, i.indiv AS indiv_id, spec.value AS species, spec.id AS species_id,
+          i.indiv AS indiv_id, spec.value AS species,
           i.sex_id AS sex, i.top_collection AS resolved_stock_origin, i.catch_year,
           i.id_source, CASE WHEN i.id_source = 'PBT' THEN 'Y' ELSE NULL END AS hatchery_origin,
           ipbt.pbt_brood_year, ipbt.pbt_brood_collection, ipbt.pbt_brood_group,
@@ -210,7 +210,7 @@ REPORTS = {
     },
     "estimateCatchByStockAge": {
         "select": """
-          i.id, t.sample_collection, i.indiv AS indiv_id, spec.value AS species,
+          t.sample_collection, i.indiv AS indiv_id, spec.value AS species,
           i.id_source, irr.repunit, irr.probability
         """,
         "from": CORE_FROM_INDIVIDUALS
@@ -220,7 +220,7 @@ REPORTS = {
     },
     "projects": {
         "select": """
-          s.value AS species, p.date_run, p.original_filename AS file_name,
+          p.original_filename AS workbook, s.value AS species, p.date_run,
           p.baseline_file, p.attributes
         """,
         "from": " FROM grd.projects p LEFT JOIN grd_ref.species_ref s ON s.id = p.species_id ",
@@ -228,14 +228,17 @@ REPORTS = {
         "flatten": "attributes",  # applied on /download only
     },
     "sampleCollections": {
-        "select": " * ",
-        "from": CORE_FROM_COLLECTIONS,
+        "select": """
+          p.original_filename AS workbook, t.sample_collection, t.sample_code,
+          t.contact, t.area_fished, t.attributes
+        """,
+        "from": CORE_FROM_COLLECTIONS + " LEFT JOIN grd.projects p ON p.id = t.projects_id ",
         "kind": "collections",
         "flatten": "attributes",  # applied on /download only
     },
     "stockProportionEstimates": {
         "select": """
-          p.id AS project_id, p.baseline_file AS baseline, t.id, t.sample_code,
+          p.original_filename AS workbook, p.baseline_file AS baseline, t.sample_code,
           t.sample_collection, t.attributes ->> 'Year' AS year,
           t.attributes ->> 'N_reported' AS reported, t.attributes -> 'N_filtered' AS filtered,
           t.contact, re.repunit_estimates
@@ -246,7 +249,7 @@ REPORTS = {
     },
     "dataLoad": {
         "select": """
-          fv.original_filename AS file_name, fv.grd_data_loaded AS data_loaded,
+          fv.original_filename AS workbook, fv.grd_data_loaded AS data_loaded,
           fv.issue_indiv_list, fv.issue_inventories_list
         """,
         "from": """
