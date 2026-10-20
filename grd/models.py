@@ -18,7 +18,7 @@ class Unmanaged(models.Model):
         ordering = ["pk"]
 
 
-class Project(Unmanaged):
+class Workbook(Unmanaged):
     id = models.BigAutoField(primary_key=True)
     species_id = models.BigIntegerField()
     sha256 = models.BinaryField()
@@ -30,6 +30,7 @@ class Project(Unmanaged):
     baseline_file = models.TextField(blank=True, null=True)
 
     class Meta(Unmanaged.Meta):
+        # Table keeps its old name until the schema rename (tracker task 1.4).
         db_table = "projects"
         ordering = ["-ingestion_date", "-id"]
 
@@ -39,8 +40,8 @@ class Project(Unmanaged):
 
 class CollectionsAndGroups(Unmanaged):
     id = models.BigAutoField(primary_key=True)
-    project = models.ForeignKey(
-        Project, models.DO_NOTHING, db_column="projects_id", related_name="collections"
+    workbook = models.ForeignKey(
+        Workbook, models.DO_NOTHING, db_column="projects_id", related_name="collections_and_groups"
     )
     group = models.TextField()
     collection = models.TextField(blank=True, null=True)
@@ -52,10 +53,10 @@ class CollectionsAndGroups(Unmanaged):
         db_table = "collections_and_groups"
 
 
-class ProjectBaselineFile(Unmanaged):
+class BaselineCollection(Unmanaged):
     id = models.BigAutoField(primary_key=True)
-    project = models.ForeignKey(
-        Project, models.DO_NOTHING, db_column="projects_id", related_name="baseline_files"
+    workbook = models.ForeignKey(
+        Workbook, models.DO_NOTHING, db_column="projects_id", related_name="baseline_collections"
     )
     repunit = models.TextField()
     collection = models.TextField(blank=True, null=True)
@@ -71,8 +72,8 @@ class ProjectBaselineFile(Unmanaged):
 
 class Inventory(Unmanaged):
     id = models.BigAutoField(primary_key=True)
-    project = models.ForeignKey(
-        Project, models.DO_NOTHING, db_column="projects_id", related_name="inventories"
+    workbook = models.ForeignKey(
+        Workbook, models.DO_NOTHING, db_column="projects_id", related_name="inventories"
     )
     sample_collection = models.TextField()
     sample_code = models.TextField(blank=True, null=True)
@@ -110,8 +111,8 @@ class Estimate(Unmanaged):
 
 class Individual(Unmanaged):
     id = models.BigAutoField(primary_key=True)
-    project = models.ForeignKey(
-        Project, models.DO_NOTHING, db_column="projects_id", related_name="individuals"
+    workbook = models.ForeignKey(
+        Workbook, models.DO_NOTHING, db_column="projects_id", related_name="individuals"
     )
     indiv = models.TextField()
     id_source = models.TextField(blank=True, null=True)

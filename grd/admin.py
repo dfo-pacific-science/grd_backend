@@ -21,8 +21,8 @@ class _ViewAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(models.Project)
-class ProjectAdmin(admin.ModelAdmin):
+@admin.register(models.Workbook)
+class WorkbookAdmin(admin.ModelAdmin):
     list_display = ("id", "original_filename", "species_id", "pipeline_version",
                     "ingestion_date", "date_run")
     list_filter = ("pipeline_version", "species_id", "ingestion_date")
@@ -31,25 +31,25 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(models.Individual)
 class IndividualAdmin(admin.ModelAdmin):
-    list_display = ("id", "indiv", "project", "top_collection",
+    list_display = ("id", "indiv", "workbook", "top_collection",
                     "top_collection_probability", "catch_date")
     list_filter = ("id_source", "sex_id", "catch_year")
     search_fields = ("indiv", "mgl_pid", "mgl_pid_batch", "stamp_id")
-    list_select_related = ("project",)
-    raw_id_fields = ("project",)
+    list_select_related = ("workbook",)
+    raw_id_fields = ("workbook",)
 
 
 @admin.register(models.Inventory)
 class InventoryAdmin(admin.ModelAdmin):
-    list_display = ("id", "sample_collection", "sample_code", "project", "contact")
+    list_display = ("id", "sample_collection", "sample_code", "workbook", "contact")
     search_fields = ("sample_collection", "sample_code", "contact", "area_fished")
-    list_select_related = ("project",)
-    raw_id_fields = ("project",)
+    list_select_related = ("workbook",)
+    raw_id_fields = ("workbook",)
 
 
 for _model in (
     models.CollectionsAndGroups,
-    models.ProjectBaselineFile,
+    models.BaselineCollection,
     models.Estimate,
     models.IndividualCollectionResult,
     models.IndividualRepunitResult,
