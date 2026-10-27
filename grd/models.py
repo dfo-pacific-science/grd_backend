@@ -35,7 +35,8 @@ class Workbook(Unmanaged):
         ordering = ["-ingestion_date", "-id"]
 
     def __str__(self):
-        return f"{self.id}: {self.original_filename}"
+        # Users see the workbook's filename; the primary key stays internal (task 1.6).
+        return self.original_filename
 
 
 class CollectionsAndGroups(Unmanaged):
