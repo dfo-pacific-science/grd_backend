@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "grd",
     "grd_ref",
     "grd_validation",
+    "explore",
 ]
 
 MIDDLEWARE = [
