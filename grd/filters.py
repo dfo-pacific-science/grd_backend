@@ -3,12 +3,12 @@ import django_filters as filters
 from . import models
 
 
-class ProjectFilter(filters.FilterSet):
+class WorkbookFilter(filters.FilterSet):
     ingestion_date_after = filters.DateFilter(field_name="ingestion_date", lookup_expr="gte")
     ingestion_date_before = filters.DateFilter(field_name="ingestion_date", lookup_expr="lte")
 
     class Meta:
-        model = models.Project
+        model = models.Workbook
         fields = {
             "species_id": ["exact"],
             "pipeline_version": ["exact"],
@@ -21,7 +21,7 @@ class IndividualFilter(filters.FilterSet):
     class Meta:
         model = models.Individual
         fields = {
-            "project": ["exact"],
+            "workbook": ["exact"],
             "indiv": ["exact", "icontains"],
             "id_source": ["exact"],
             "top_collection": ["exact", "icontains"],
@@ -38,7 +38,7 @@ class InventoryFilter(filters.FilterSet):
     class Meta:
         model = models.Inventory
         fields = {
-            "project": ["exact"],
+            "workbook": ["exact"],
             "sample_collection": ["exact", "icontains"],
             "sample_code": ["exact"],
             "contact": ["exact", "icontains"],

@@ -4,8 +4,8 @@ Full CRUD on every real table. The two `*_run_data_v` database views are
 read-only (Postgres won't accept writes through them).
 
 Caveats for these ``managed = False`` tables:
-- `projects` has a NOT NULL `sha256` binary column serialized as read-only hex —
-  create project rows via the ingestion pipeline, not the API; update works.
+- `Workbook` (`projects` table) has a NOT NULL `sha256` binary column serialized as
+  read-only hex. Create workbook rows via the ingestion pipeline, not the API; update works.
 - deletes are blocked by the database while foreign-key children still exist.
 """
 
@@ -14,10 +14,10 @@ from rest_framework import viewsets
 from . import filters, models, serializers
 
 
-class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = models.Project.objects.all()
-    serializer_class = serializers.ProjectSerializer
-    filterset_class = filters.ProjectFilter
+class WorkbookViewSet(viewsets.ModelViewSet):
+    queryset = models.Workbook.objects.all()
+    serializer_class = serializers.WorkbookSerializer
+    filterset_class = filters.WorkbookFilter
     search_fields = ["original_filename", "pipeline_version", "baseline_file"]
     ordering_fields = ["id", "ingestion_date", "date_run", "species_id"]
 
@@ -25,15 +25,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
 class CollectionsAndGroupsViewSet(viewsets.ModelViewSet):
     queryset = models.CollectionsAndGroups.objects.all()
     serializer_class = serializers.CollectionsAndGroupsSerializer
-    filterset_fields = ["project", "group", "collection"]
+    filterset_fields = ["workbook", "group", "collection"]
     search_fields = ["group", "collection"]
     ordering_fields = ["id", "group_display_order", "collection_display_order"]
 
 
-class ProjectBaselineFileViewSet(viewsets.ModelViewSet):
-    queryset = models.ProjectBaselineFile.objects.all()
-    serializer_class = serializers.ProjectBaselineFileSerializer
-    filterset_fields = ["project", "repunit", "collection", "cu"]
+class BaselineCollectionViewSet(viewsets.ModelViewSet):
+    queryset = models.BaselineCollection.objects.all()
+    serializer_class = serializers.BaselineCollectionSerializer
+    filterset_fields = ["workbook", "repunit", "collection", "cu"]
     search_fields = ["repunit", "collection", "cu", "cu_name"]
     ordering_fields = ["id", "display_order"]
 
@@ -55,7 +55,7 @@ class EstimateViewSet(viewsets.ModelViewSet):
 
 
 class IndividualViewSet(viewsets.ModelViewSet):
-    queryset = models.Individual.objects.select_related("project").all()
+    queryset = models.Individual.objects.select_related("workbook").all()
     filterset_class = filters.IndividualFilter
     search_fields = ["indiv", "mgl_pid", "mgl_pid_batch", "top_collection", "stamp_id"]
     ordering_fields = ["id", "catch_date", "catch_year", "top_collection_probability"]

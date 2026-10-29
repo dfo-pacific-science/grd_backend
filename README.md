@@ -69,9 +69,9 @@ The `grd.*_run_data_v` endpoints are database views and are read-only.
 All under `/api/`, all require `Authorization: Bearer <token>`. Each supports
 `?search=`, `?ordering=`, field filters, and page/`page_size` pagination.
 
-**`grd/`** — `projects/`, `individuals/` (detail nests results + pbt),
+**`grd/`** — `workbooks/`, `individuals/` (detail nests results + pbt),
 `collection-results/`, `repunit-results/`, `region-results/`, `custom-results/`,
-`estimates/`, `inventories/`, `collections-and-groups/`, `baseline-files/`,
+`estimates/`, `inventories/`, `collections-and-groups/`, `baseline-collections/`,
 `pbt/`, `extractions/`, `positive-species/`, `negative-species/`, `duplicates/`,
 `individual-inventories/`, `run-data/individuals/` *(read-only view)*,
 `run-data/inventories/` *(read-only view)*
@@ -81,7 +81,7 @@ All under `/api/`, all require `Authorization: Bearer <token>`. Each supports
 
 **`grd-validation/`** — `file-versions/`, `sheets/`, `mapped-terms/`, `raw-terms/`
 
-Notes: `projects.sha256` / `file_versions.sha256_checksum` are read-only hex
+Notes: `workbooks/` `sha256` / `file_versions.sha256_checksum` are read-only hex
 (create those rows via the pipeline; update works). Deletes are refused by the
 DB while FK children exist. PATCH on a JSON column (`attributes`) replaces the
 whole object — send the merged value.
