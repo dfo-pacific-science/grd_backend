@@ -18,7 +18,7 @@ urlpatterns = [
     path("api/grd/", include("grd.urls")),
     path("api/grd-ref/", include("grd_ref.urls")),
     path("api/grd-validation/", include("grd_validation.urls")),
-    path("api/reports/", include("reports.urls")),
+    path("api/explore/", include("explore.urls")),
     # OpenAPI schema + docs
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(

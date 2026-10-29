@@ -69,9 +69,9 @@ The `grd.*_run_data_v` endpoints are database views and are read-only.
 All under `/api/`, all require `Authorization: Bearer <token>`. Each supports
 `?search=`, `?ordering=`, field filters, and page/`page_size` pagination.
 
-**`grd/`** — `projects/`, `individuals/` (detail nests results + pbt),
+**`grd/`** — `workbooks/`, `individuals/` (detail nests results + pbt),
 `collection-results/`, `repunit-results/`, `region-results/`, `custom-results/`,
-`estimates/`, `inventories/`, `collections-and-groups/`, `baseline-files/`,
+`estimates/`, `inventories/`, `collections-and-groups/`, `baseline-collections/`,
 `pbt/`, `extractions/`, `positive-species/`, `negative-species/`, `duplicates/`,
 `individual-inventories/`, `run-data/individuals/` *(read-only view)*,
 `run-data/inventories/` *(read-only view)*
@@ -81,35 +81,10 @@ All under `/api/`, all require `Authorization: Bearer <token>`. Each supports
 
 **`grd-validation/`** — `file-versions/`, `sheets/`, `mapped-terms/`, `raw-terms/`
 
-Notes: `projects.sha256` / `file_versions.sha256_checksum` are read-only hex
+Notes: `workbooks/` `sha256` / `file_versions.sha256_checksum` are read-only hex
 (create those rows via the pipeline; update works). Deletes are refused by the
 DB while FK children exist. PATCH on a JSON column (`attributes`) replaces the
 whole object — send the merged value.
-
-## Report endpoints (`reports/` app)
-
-Ports of the old Next.js `app/api/*` routes — raw-SQL joins / pivots / JSONB
-aggregation that don't fit a single model. Same query params and the same
-`{ data, page, pageSize, total, totalPages }` envelope as the originals, so the
-frontend swap is just the base URL. Currently **`AllowAny`** (matches the old
-public API); set `PERMISSION` in `reports/views.py` to lock them down.
-
-| Path (`/api/reports/…`) | one row per | extra params |
-| --- | --- | --- |
-| `individuals` | individual | `species dateFrom dateTo idSource` |
-| `bsciDNAResults` | individual | `species dateFrom dateTo idSource` |
-| `scBDWRDNA` | individual (top-5 repunits pivoted) | `species dateFrom dateTo idSource` |
-| `estimateCatchByStockAge` | individual × repunit | + `probabilityMin probabilityMax` |
-| `projects` | project | — (sort only) |
-| `sampleCollections` | inventory | `year sampleCode` |
-| `stockProportionEstimates` | inventory (repunit stats pivoted) | `year sampleCode` |
-
-Shared params: `page` (`all` or `1,2,…`, 50/page), `sort`, `dir`, `filter`
-(full-row text search). Add `/download` to any path for the bare row array with
-JSONB columns flattened (for Excel export).
-
-Filter-option lookups: `options/species`, `options/idSources`, `options/years`,
-`options/sampleCodes`.
 
 ## Next.js usage
 

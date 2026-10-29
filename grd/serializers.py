@@ -1,6 +1,6 @@
 """Serializers for the `grd` schema.
 
-All columns are writable except `projects.sha256`, surfaced as a read-only hex
+All columns are writable except `Workbook.sha256` (`projects` table), surfaced as a read-only hex
 string (a NOT NULL binary column owned by the ingestion pipeline).
 """
 
@@ -11,11 +11,11 @@ from rest_framework import serializers
 from . import models
 
 
-class ProjectSerializer(serializers.ModelSerializer):
+class WorkbookSerializer(serializers.ModelSerializer):
     sha256 = serializers.SerializerMethodField()
 
     class Meta:
-        model = models.Project
+        model = models.Workbook
         fields = "__all__"
 
     def get_sha256(self, obj) -> str | None:
@@ -28,9 +28,9 @@ class CollectionsAndGroupsSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ProjectBaselineFileSerializer(serializers.ModelSerializer):
+class BaselineCollectionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = models.ProjectBaselineFile
+        model = models.BaselineCollection
         fields = "__all__"
 
 

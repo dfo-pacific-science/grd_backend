@@ -4,9 +4,9 @@ from . import views
 
 router = DefaultRouter()
 
-router.register("projects", views.ProjectViewSet)
+router.register("workbooks", views.WorkbookViewSet)
 router.register("collections-and-groups", views.CollectionsAndGroupsViewSet)
-router.register("baseline-files", views.ProjectBaselineFileViewSet)
+router.register("baseline-collections", views.BaselineCollectionViewSet)
 router.register("inventories", views.InventoryViewSet)
 router.register("estimates", views.EstimateViewSet)
 router.register("individuals", views.IndividualViewSet)
