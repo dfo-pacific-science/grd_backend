@@ -5,9 +5,9 @@ from rest_framework import serializers
 #   {
 #     "term": "indiv",
 #     "definition": "individual fish identifier, ...",
-#     "frontend_term": "Individual ID",
+#     "label": "Individual ID",
 #     "original_workbook_term": "indiv",
-#     "group": "Individual",
+#     "group": "Common",
 #     "default_visible": true,
 #     "views": ["per_assignment", "per_fish"]
 #   },
