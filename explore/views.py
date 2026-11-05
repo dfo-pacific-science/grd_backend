@@ -23,7 +23,7 @@ class IndividualFieldsView(APIView):
     def get(self, request):
         queryset = MappedTerm.objects.filter(
             term__in=[f.term for f in INDIVIDUAL_FIELDS]
-        ).prefetch_related("raw_terms")
+        )
         # Build a dict {term: mapped_term} for quick lookup.
         by_term = {mt.term: mt for mt in queryset}
 
@@ -35,12 +35,11 @@ class IndividualFieldsView(APIView):
             stub = DICTIONARY_STUB.get(field.term, {})
             field_dicts.append({
                 "term": field.term,
-                # TODO 3.1: mapped_term.label once mapped_terms has a label column
-                "label": stub.get("label"),
-                "definition": (mapped_term.definition if mapped_term else None) or stub.get("definition"),
-                "workbook_terms": (
-                    [rt.term for rt in mapped_term.raw_terms.all()] if mapped_term else []
-                ) or stub.get("workbook_terms", []),
+                "label": mapped_term.frontend_term if mapped_term else stub.get("label"),
+                "definition": mapped_term.definition if mapped_term else stub.get("definition"),
+                "original_workbook_term": 
+                    mapped_term.original_workbook_term if mapped_term
+                    else None,
                 "group": field.group,
                 "default_visible": field.default_visible,
                 "views": sorted(field.view),

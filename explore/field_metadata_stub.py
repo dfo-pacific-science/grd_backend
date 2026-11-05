@@ -69,16 +69,6 @@ DICTIONARY_STUB = {
         "definition": "The probability associated with the top baseline collection (population) for the fish.",
         "workbook_terms": [],
     },
-    "CU": {
-        "label": "CU",
-        "definition": "For Canada Conservation Unit number code.",
-        "workbook_terms": ["CU"],
-    },
-    "CU_NAME": {
-        "label": "CU name",
-        "definition": "For Canada Conservation Unit name, for US genetic group.",
-        "workbook_terms": ["CU_NAME"],
-    },
     "pbt_brood_year": {
         "label": "PBT brood year",
         "definition": "Brood Year of parents to which individual was assigned via PBT.",

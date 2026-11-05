@@ -60,8 +60,8 @@ def individuals_per_fish():
         # Chained separately so "repunit" exists before baseline_match uses it.
         # NULL when the workbook has no baseline tab (tracker 6.6).
         .annotate(
-            CU=Subquery(baseline_match.values("cu")[:1]),
-            CU_NAME=Subquery(baseline_match.values("cu_name")[:1]),
+            cu=Subquery(baseline_match.values("cu")[:1]),
+            cu_name=Subquery(baseline_match.values("cu_name")[:1]),
         )
         # workbook_name, not workbook: the workbook FK keeps its name so filters
         # can send the numeric ID (1.6).
