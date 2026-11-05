@@ -64,6 +64,11 @@ DICTIONARY_STUB = {
         "definition": "The baseline collection (population) with the highest assignment probability for the fish, when provided by the lab.",
         "workbook_terms": [],
     },
+    "top_collection_probability": {
+        "label": "Top collection probability",
+        "definition": "The probability associated with the top baseline collection (population) for the fish.",
+        "workbook_terms": [],
+    },
     "CU": {
         "label": "CU",
         "definition": "For Canada Conservation Unit number code.",

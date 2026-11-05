@@ -44,6 +44,7 @@ INDIVIDUAL_FIELDS = (
     RegistryField("repunit", RESULTS, default_visible=True),
     RegistryField("probability", RESULTS, default_visible=True),
     RegistryField("top_collection", RESULTS, default_visible=True),
+    RegistryField("top_collection_probability", RESULTS, default_visible=True),
     RegistryField("CU", RESULTS),
     RegistryField("CU_NAME", RESULTS, default_visible=True),
     RegistryField("pbt_brood_year", RESULTS),
