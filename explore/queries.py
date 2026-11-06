@@ -63,10 +63,10 @@ def individuals_per_fish():
             cu=Subquery(baseline_match.values("cu")[:1]),
             cu_name=Subquery(baseline_match.values("cu_name")[:1]),
         )
-        # workbook_name, not workbook: the workbook FK keeps its name so filters
-        # can send the numeric ID (1.6).
+        # The workbook is shown by its dictionary term original_filename. The
+        # workbook FK keeps its name so filters can send the numeric ID (1.6).
         .annotate(
-            workbook_name=F("workbook__original_filename"),
+            original_filename=F("workbook__original_filename"),
             species=Subquery(species_name),
             sample_collection=Subquery(
                 inventory_link.values("inventory__sample_collection")[:1]

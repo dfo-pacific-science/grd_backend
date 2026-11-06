@@ -8,10 +8,6 @@ DICTIONARY_STUB = {
         "label": "Individual ID",
         "definition": "Individual fish identifier.",
     },
-    "species": {
-        "label": "Species",
-        "definition": "Species of the individual fish.",
-    },
     "sample_collection": {
         "label": "Sample collection",
         "definition": "A unique identifier associated with samples collected and analysed together within the same project, formatted as Source_AreaCode(Year)_Month(MonthName). Multiple sample_collections can exist under each SampleCode.",
@@ -31,10 +27,6 @@ DICTIONARY_STUB = {
     "result_type": {
         "label": "Result type",
         "definition": "How the fish was assigned to stock: GSI (Genetic Stock Identification) or PBT (Parentage Based Tagging).",
-    },
-    "workbook": {
-        "label": "Workbook",
-        "definition": "The MGL workbook (Excel file) the results were loaded from, shown by its file name.",
     },
     "rank": {
         "label": "Rank",
