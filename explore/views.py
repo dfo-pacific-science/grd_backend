@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from grd_validation.models import MappedTerm
 
 from .field_metadata_stub import DICTIONARY_STUB
+from .filters import IndividualFilter
 from .queries import individuals_per_fish
 from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH
 from .serializers import IndividualFieldSerializer
@@ -61,10 +62,18 @@ class IndividualsView(APIView):
     def get(self, request):
         # Parse first so a bad fields= fails before any query is built.
         fields = parse_fields(request.query_params, PER_FISH)
+        qs = individuals_per_fish()
+        filterset = IndividualFilter(request.query_params, queryset=qs)
+        if not filterset.is_valid():
+            raise ValidationError(filterset.errors)
+        qs = filterset.qs
         # "id" breaks ties between re-run fish that share an indiv.
-        rows = individuals_per_fish().order_by("indiv", "id").values("id", *fields)
+        qs = qs.order_by("indiv", "id")
+        # return only selected columns plus id for table row keys
+        qs = qs.values("id", *fields)
+        
         paginator = IndividualsPagination()
-        page = paginator.paginate_queryset(rows, request, view=self)
+        page = paginator.paginate_queryset(qs, request)
         return paginator.get_paginated_response(page)
 
 
