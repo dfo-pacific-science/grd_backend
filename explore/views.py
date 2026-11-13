@@ -16,7 +16,7 @@ from grd_validation.models import MappedTerm
 
 from .field_metadata_stub import DICTIONARY_STUB
 from .filters import IndividualFilter
-from .queries import individuals_per_fish
+from .queries import FAILED_RESULTS, RESULT_TYPES, individuals_per_fish
 from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH
 from .serializers import IndividualFieldSerializer
 
@@ -145,6 +145,70 @@ class IndividualsView(APIView):
         paginator = IndividualsPagination()
         page = paginator.paginate_queryset(qs, request)
         return paginator.get_paginated_response(page)
+
+
+class IndividualFilterOptionsView(APIView):
+    """Choices for every select filter on the Individuals page (3.5).
+
+    Takes the same filter params as IndividualsView. Each list comes from the per-fish queryset
+    narrowed by every active filter except its own (faceted filtering), so every option still
+    matches at least one fish, and picking one value never hides the others in the same list.
+    """
+
+    permission_classes = PERMISSION
+
+    # Filters whose options are the distinct values of a per-fish annotation.
+    DISTINCT_TERMS = [
+        "sample_collection",
+        "sample_code",
+        "repunit",
+        "top_collection",
+        "cu",
+        "pbt_brood_collection",
+        "sex_id",
+    ]
+
+    def get(self, request):
+        params = request.query_params
+        # Validate every filter once up front, so a bad value gets the same 400 as the table.
+        check = IndividualFilter(params, queryset=individuals_per_fish())
+        if not check.is_valid():
+            raise ValidationError(check.errors)
+
+        def facet(term):
+            """Fish matching every active filter except term's own."""
+            others = params.copy()  # QueryDict is immutable; copy() gives a mutable one
+            others.pop(term, None)
+            return IndividualFilter(others, queryset=individuals_per_fish()).qs
+
+        options = {
+            # ID and name pairs: filters send the ID, the UI shows the name (1.6).
+            "species": [
+                {"value": s.id, "label": s.value}
+                for s in SpeciesRef.objects.filter(
+                    id__in=facet("species").values("workbook__species_id")
+                ).order_by("value")
+            ],
+            "workbook": [
+                {"value": wid, "label": name}
+                for wid, name in facet("workbook")
+                .values_list("workbook_id", "original_filename")
+                .distinct()
+                .order_by("original_filename")
+            ],
+            # Fixed lists, not queried: every value is a known id_source.
+            "result_type": RESULT_TYPES,
+            "failed_result": FAILED_RESULTS,
+        }
+        for term in self.DISTINCT_TERMS:
+            options[term] = list(
+                facet(term)
+                .exclude(**{f"{term}__isnull": True})
+                .values_list(term, flat=True)
+                .distinct()
+                .order_by(term)
+            )
+        return Response(options)
 
 
 class IndividualFieldsView(APIView):
