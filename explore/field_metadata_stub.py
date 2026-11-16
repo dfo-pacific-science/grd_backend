@@ -56,6 +56,14 @@ DICTIONARY_STUB = {
         "label": "PBT brood collection",
         "definition": "The river system, waterbody or location where broodstock individuals are collected for Parentage-Based Tagging (PBT) analysis.",
     },
+    "dad_id": {
+        "label": "Dad ID",
+        "definition": "Identifier of the PBT-assigned father (dadid). Blank where not provided.",
+    },
+    "mum_id": {
+        "label": "Mum ID",
+        "definition": "Identifier of the PBT-assigned mother (mumid). Blank where not provided.",
+    },
     "sex_id": {
         "label": "Sex",
         "definition": "male / presumed_female / unknown",

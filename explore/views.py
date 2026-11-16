@@ -1,6 +1,7 @@
 import csv
 from itertools import batched
 
+from django.db.models import F
 from django.http import StreamingHttpResponse
 from django.utils import timezone
 from django.utils.text import slugify
@@ -17,7 +18,7 @@ from grd_validation.models import MappedTerm
 from .field_metadata_stub import DICTIONARY_STUB
 from .filters import IndividualFilter
 from .queries import FAILED_RESULTS, RESULT_TYPES, individuals_per_fish
-from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH
+from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH, default_terms
 from .serializers import IndividualFieldSerializer
 
 # Public, read-only for the MVP (open question 5). Swap for IsAuthenticated or a custom
@@ -34,17 +35,15 @@ class IndividualsPagination(PageNumberPagination):
 def parse_fields(params, view):
     """Turn ?fields=a,b into a list of registry terms available in the given view (4.2.3).
 
-    No fields= returns the view's default columns. Unknown terms, or terms from the other
-    view, raise a 400 keyed by "fields".
+    No fields= returns the view's default columns for the result_type filter (4.15).
+    Unknown terms, or terms from the other view, raise a 400 keyed by "fields".
     """
     raw = params.get("fields", "")
     # Drop blanks and duplicates, keeping the requested order.
     cleaned = list(dict.fromkeys(f.strip() for f in raw.split(",") if f.strip()))
 
     if not cleaned:
-        return [
-            f.term for f in INDIVIDUAL_FIELDS if f.default_visible and view in f.view
-        ]
+        return default_terms(view, params.get("result_type", "").split(","))
 
     unknown_terms = [term for term in cleaned if term not in FIELDS_BY_TERM]
     # Known terms that only exist in the other view, e.g. rank on the per-fish view.
@@ -67,18 +66,36 @@ def parse_fields(params, view):
     return cleaned
 
 
+def parse_ordering(params, view):
+    """Turn ?ordering=-catch_year into order_by expressions (4.5).
+
+    One registry term, "-" prefix for descending. Blanks sort last either way, so a
+    descending sort doesn't open on a page of empty cells. "id" is the tiebreaker that
+    keeps paging stable when many fish share a value. No ordering= keeps indiv order.
+    """
+    raw = params.get("ordering", "").strip()
+    if not raw:
+        return [F("indiv").asc(), F("id").asc()]
+
+    descending = raw.startswith("-")
+    term = raw.removeprefix("-")
+    if term not in FIELDS_BY_TERM or view not in FIELDS_BY_TERM[term].view:
+        raise ValidationError({"ordering": [f"Cannot sort by: {term}"]})
+
+    expr = F(term).desc(nulls_last=True) if descending else F(term).asc(nulls_last=True)
+    return [expr, F("id").asc()]
+
+
 def filtered_individuals(request):
     """Return a queryset of individuals filtered by the request's query parameters (4.2.2)."""
     # FilterSet takes the request's query params and returns a filtered queryset.
     # Parse first so a bad fields= fails before any query is built.
     fields = parse_fields(request.query_params, PER_FISH)
+    ordering = parse_ordering(request.query_params, PER_FISH)
     filterset = IndividualFilter(request.query_params, queryset=individuals_per_fish())
     if not filterset.is_valid():
         raise ValidationError(filterset.errors)
-    qs = filterset.qs
-    # "id" breaks ties between re-run fish that share an indiv.
-    qs = qs.order_by("indiv", "id")
-    return qs, fields
+    return filterset.qs.order_by(*ordering), fields
 
 
 def export_filename(request):
@@ -166,6 +183,8 @@ class IndividualFilterOptionsView(APIView):
         "cu",
         "pbt_brood_collection",
         "sex_id",
+        "baseline_file",
+        "repunits_file",
     ]
 
     def get(self, request):
@@ -243,7 +262,7 @@ class IndividualFieldsView(APIView):
                         mapped_term.original_workbook_term if mapped_term else None
                     ),
                     "group": field.group,
-                    "default_visible": field.default_visible,
+                    "default_for": sorted(field.default_for),
                     "views": sorted(field.view),
                 }
             )

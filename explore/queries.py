@@ -1,4 +1,6 @@
 from django.db.models import Case, F, OuterRef, Subquery, When
+from django.db.models.fields.json import KeyTextTransform
+from django.db.models.functions import Extract
 
 from grd.models import (
     BaselineCollection,
@@ -77,5 +79,20 @@ def individuals_per_fish():
             # Each fish gets one of the two; the other is NULL (no default).
             result_type=Case(When(id_source__in=RESULT_TYPES, then=F("id_source"))),
             failed_result=Case(When(id_source__in=FAILED_RESULTS, then=F("id_source"))),
+            # Catch Julian day (4.11): day of year, 1 to 366. NULL when catch_date is missing.
+            # "doy" becomes Postgres EXTRACT(DOY ...); Django has no named lookup for it.
+            catch_jd=Extract("catch_date", "doy"),
+            # PBT age (4.12): catch year minus brood year. NULL for fish with no PBT brood
+            # year; no external age source is loaded yet.
+            fish_age=F("catch_year") - F("pbt__pbt_brood_year"),
+            # PBT parent IDs (4.16), stored in individuals_pbt.attributes. NULL when not provided.
+            dad_id=KeyTextTransform("dadid", "pbt__attributes"),
+            mum_id=KeyTextTransform("mumid", "pbt__attributes"),
+            # Analysis metadata from the workbook (4.4.2). Filters only: 5.6 keeps these out
+            # of the results table.
+            date_run=F("workbook__date_run"),
+            baseline_file=F("workbook__baseline_file"),
+            # The repunits file name is stored in projects.attributes as {"repunits": "..."}.
+            repunits_file=KeyTextTransform("repunits", "workbook__attributes"),
         )
     )

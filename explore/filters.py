@@ -39,6 +39,7 @@ class IndividualFilter(filters.FilterSet):
     catch_year = filters.RangeFilter(field_name="catch_year")
     catch_date_min = filters.DateFilter(field_name="catch_date", lookup_expr="gte")
     catch_date_max = filters.DateFilter(field_name="catch_date", lookup_expr="lte")
+    catch_jd = filters.RangeFilter(field_name="catch_jd")
     # result_type and failed_result are both stored in id_source (4.4.4). The choices stop
     # a failure reason being sent as a result type, and the reverse.
     result_type = ChoiceInFilter(
@@ -47,6 +48,12 @@ class IndividualFilter(filters.FilterSet):
 
     # Analysis (4.4.2). Workbook is sent as its numeric ID (1.6).
     workbook = NumberInFilter(field_name="workbook")
+    # Workbook metadata, filter-only (5.6). Baseline and repunits files have no ID table,
+    # so they are filtered by file name.
+    date_run_min = filters.DateFilter(field_name="date_run", lookup_expr="gte")
+    date_run_max = filters.DateFilter(field_name="date_run", lookup_expr="lte")
+    baseline_file = CharInFilter(field_name="baseline_file")
+    repunits_file = CharInFilter(field_name="repunits_file")
 
     # Results (4.4.3)
     repunit = CharInFilter(field_name="repunit")
@@ -57,11 +64,13 @@ class IndividualFilter(filters.FilterSet):
     pbt_brood_year = filters.RangeFilter(field_name="pbt__pbt_brood_year")
     pbt_brood_collection = CharInFilter(field_name="pbt__pbt_brood_collection")
     sex_id = CharInFilter(field_name="sex_id")
+    fish_age = filters.RangeFilter(field_name="fish_age")
     failed_result = ChoiceInFilter(
         field_name="id_source", choices=[(v, v) for v in FAILED_RESULTS]
     )
 
     class Meta:
         model = Individual
-        # Every filter is declared above, so param names are always registry terms.
+        # Every filter is declared above. Param names are registry terms, except the
+        # filter-only ones (catch_jd, date_run, baseline_file, repunits_file).
         fields = []

@@ -8,7 +8,7 @@ from rest_framework import serializers
 #     "label": "Individual ID",
 #     "original_workbook_term": "indiv",
 #     "group": "Common",
-#     "default_visible": true,
+#     "default_for": ["GSI", "PBT"],
 #     "views": ["per_assignment", "per_fish"]
 #   },
 #   ...
@@ -21,6 +21,7 @@ class IndividualFieldSerializer(serializers.Serializer):
     label = serializers.CharField(allow_null=True)
     original_workbook_term = serializers.CharField(allow_null=True)
     group = serializers.CharField()
-    default_visible = serializers.BooleanField()
+    # Result types this field is a default column for (4.15); empty means selectable only.
+    default_for = serializers.ListField(child=serializers.CharField())
     views = serializers.ListField(child=serializers.CharField())
 
