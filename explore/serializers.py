@@ -4,10 +4,10 @@ from rest_framework import serializers
 # [
 #   {
 #     "term": "indiv",
-#     "label": "Individual ID",
 #     "definition": "individual fish identifier, ...",
-#     "workbook_terms": ["indiv"],
-#     "group": "Individual",
+#     "label": "Individual ID",
+#     "original_workbook_term": "indiv",
+#     "group": "Common",
 #     "default_visible": true,
 #     "views": ["per_assignment", "per_fish"]
 #   },
@@ -17,9 +17,9 @@ from rest_framework import serializers
 
 class IndividualFieldSerializer(serializers.Serializer):
     term = serializers.CharField()
-    label = serializers.CharField(allow_null=True)
     definition = serializers.CharField(allow_null=True)
-    workbook_terms = serializers.ListField(child=serializers.CharField())
+    label = serializers.CharField(allow_null=True)
+    original_workbook_term = serializers.CharField(allow_null=True)
     group = serializers.CharField()
     default_visible = serializers.BooleanField()
     views = serializers.ListField(child=serializers.CharField())

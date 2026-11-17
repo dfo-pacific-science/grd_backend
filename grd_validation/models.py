@@ -53,6 +53,8 @@ class MappedTerm(Unmanaged):
     id = models.BigAutoField(primary_key=True)
     term = models.TextField(unique=True)
     definition = models.TextField(blank=True, null=True)
+    frontend_term = models.TextField(blank=True, null=True)
+    original_workbook_term = models.TextField(blank=True, null=True)
 
     class Meta(Unmanaged.Meta):
         db_table = "mapped_terms"
