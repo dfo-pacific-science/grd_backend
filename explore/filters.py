@@ -2,7 +2,7 @@ import django_filters as filters
 
 from grd.models import Individual
 
-from .queries import FAILED_RESULTS, RESULT_TYPES
+from .queries import ID_SOURCE
 
 
 # Comma-separated lists, e.g. ?species=124,125. Each value is checked by the base filter,
@@ -40,10 +40,8 @@ class IndividualFilter(filters.FilterSet):
     catch_date_min = filters.DateFilter(field_name="catch_date", lookup_expr="gte")
     catch_date_max = filters.DateFilter(field_name="catch_date", lookup_expr="lte")
     catch_jd = filters.RangeFilter(field_name="catch_jd")
-    # result_type and failed_result are both stored in id_source (4.4.4). The choices stop
-    # a failure reason being sent as a result type, and the reverse.
-    result_type = ChoiceInFilter(
-        field_name="id_source", choices=[(v, v) for v in RESULT_TYPES]
+    id_source = ChoiceInFilter(
+        field_name="id_source", choices=[(v, v) for v in ID_SOURCE]
     )
 
     # Analysis (4.4.2). Workbook is sent as its numeric ID (1.6).
@@ -65,9 +63,6 @@ class IndividualFilter(filters.FilterSet):
     pbt_brood_collection = CharInFilter(field_name="pbt__pbt_brood_collection")
     sex_id = CharInFilter(field_name="sex_id")
     fish_age = filters.RangeFilter(field_name="fish_age")
-    failed_result = ChoiceInFilter(
-        field_name="id_source", choices=[(v, v) for v in FAILED_RESULTS]
-    )
 
     class Meta:
         model = Individual

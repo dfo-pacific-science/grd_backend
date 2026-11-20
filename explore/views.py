@@ -17,7 +17,7 @@ from grd_validation.models import MappedTerm
 
 from .field_metadata_stub import DICTIONARY_STUB
 from .filters import IndividualFilter
-from .queries import FAILED_RESULTS, RESULT_TYPES, individuals_per_fish
+from .queries import ID_SOURCE, individuals_per_fish
 from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH, default_terms
 from .serializers import IndividualFieldSerializer
 
@@ -35,7 +35,7 @@ class IndividualsPagination(PageNumberPagination):
 def parse_fields(params, view):
     """Turn ?fields=a,b into a list of registry terms available in the given view (4.2.3).
 
-    No fields= returns the view's default columns for the result_type filter (4.15).
+    No fields= returns the view's default columns for the id_source filter (4.15).
     Unknown terms, or terms from the other view, raise a 400 keyed by "fields".
     """
     raw = params.get("fields", "")
@@ -43,7 +43,7 @@ def parse_fields(params, view):
     cleaned = list(dict.fromkeys(f.strip() for f in raw.split(",") if f.strip()))
 
     if not cleaned:
-        return default_terms(view, params.get("result_type", "").split(","))
+        return default_terms(view, params.get("id_source", ""))
 
     unknown_terms = [term for term in cleaned if term not in FIELDS_BY_TERM]
     # Known terms that only exist in the other view, e.g. rank on the per-fish view.
@@ -105,9 +105,15 @@ def export_filename(request):
     filtered_individuals, which has already rejected a malformed species= with a 400.
     """
     parts = ["grdb_individuals"]
-    species_ids = [s for s in request.query_params.get("species", "").split(",") if s.strip()]
+    species_ids = [
+        s for s in request.query_params.get("species", "").split(",") if s.strip()
+    ]
     if len(species_ids) == 1:
-        name = SpeciesRef.objects.filter(id=species_ids[0]).values_list("value", flat=True).first()
+        name = (
+            SpeciesRef.objects.filter(id=species_ids[0])
+            .values_list("value", flat=True)
+            .first()
+        )
         if name:
             # slugify keeps the name safe inside a header and a filename ("Coho (IF)" -> "coho-if").
             parts.append(slugify(name))
@@ -129,7 +135,9 @@ class Echo:
 
 class IndividualsExportView(APIView):
     """Render a queryset of individuals as CSV, streaming to the client (4.2.4)."""
+
     permission_classes = PERMISSION
+
     def get(self, request):
         """Return a response that yields CSV rows for the given queryset and fields."""
         writer = csv.writer(Echo())
@@ -137,7 +145,7 @@ class IndividualsExportView(APIView):
         queryset, fields = filtered_individuals(request)
         # get plain values tuples in a set chunk size
         rows = queryset.values_list(*fields).iterator(chunk_size=2000)
-        
+
         def stream():
             yield writer.writerow(fields)
             for batch in batched(rows, 100):
@@ -146,7 +154,9 @@ class IndividualsExportView(APIView):
         return StreamingHttpResponse(
             stream(),
             content_type="text/csv",
-            headers={"Content-Disposition": f'attachment; filename="{export_filename(request)}"'},
+            headers={
+                "Content-Disposition": f'attachment; filename="{export_filename(request)}"'
+            },
         )
 
 
@@ -215,9 +225,7 @@ class IndividualFilterOptionsView(APIView):
                 .distinct()
                 .order_by("original_filename")
             ],
-            # Fixed lists, not queried: every value is a known id_source.
-            "result_type": RESULT_TYPES,
-            "failed_result": FAILED_RESULTS,
+            "id_source": ID_SOURCE,
         }
         for term in self.DISTINCT_TERMS:
             options[term] = list(

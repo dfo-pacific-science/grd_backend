@@ -24,9 +24,9 @@ DICTIONARY_STUB = {
         "label": "Catch year",
         "definition": "Catch year.",
     },
-    "result_type": {
-        "label": "Result type",
-        "definition": "How the fish was assigned to stock: GSI (Genetic Stock Identification) or PBT (Parentage Based Tagging).",
+    "id_source": {
+        "label": "ID Source",
+        "definition": "How the fish was assigned to stock: GSI (Genetic Stock Identification) or PBT (Parentage Based Tagging), or why it could not be assigned (Too few loci, Failed to amplify, non-target_species, likely_duplicate).",
     },
     "rank": {
         "label": "Rank",
@@ -71,9 +71,5 @@ DICTIONARY_STUB = {
     "fish_age": {
         "label": "Age",
         "definition": "Estimated age of the fish in mixture based on assignment to parents of brood years.",
-    },
-    "failed_result": {
-        "label": "Failed result",
-        "definition": "Reason no stock result was reported: Too few loci, Failed to amplify, Non-target species or Likely duplicate.",
     },
 }

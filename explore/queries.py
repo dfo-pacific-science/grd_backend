@@ -11,8 +11,9 @@ from grd.models import (
 from grd_ref.models import SpeciesRef
 
 # id_source holds both how a fish was assigned and why it failed (4.4.4).
-RESULT_TYPES = ["GSI", "PBT"]
-FAILED_RESULTS = [
+ID_SOURCE = [
+    "GSI",
+    "PBT",
     "Too few loci",
     "Failed to amplify",
     "non-target_species",
@@ -76,9 +77,6 @@ def individuals_per_fish():
             sample_code=Subquery(inventory_link.values("inventory__sample_code")[:1]),
             pbt_brood_year=F("pbt__pbt_brood_year"),
             pbt_brood_collection=F("pbt__pbt_brood_collection"),
-            # Each fish gets one of the two; the other is NULL (no default).
-            result_type=Case(When(id_source__in=RESULT_TYPES, then=F("id_source"))),
-            failed_result=Case(When(id_source__in=FAILED_RESULTS, then=F("id_source"))),
             # Catch Julian day (4.11): day of year, 1 to 366. NULL when catch_date is missing.
             # "doy" becomes Postgres EXTRACT(DOY ...); Django has no named lookup for it.
             catch_jd=Extract("catch_date", "doy"),

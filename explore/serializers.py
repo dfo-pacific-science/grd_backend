@@ -21,7 +21,7 @@ class IndividualFieldSerializer(serializers.Serializer):
     label = serializers.CharField(allow_null=True)
     original_workbook_term = serializers.CharField(allow_null=True)
     group = serializers.CharField()
-    # Result types this field is a default column for (4.15); empty means selectable only.
+    # id_source groups (GSI, PBT, FAILED) this field is a default column for (4.15); empty means selectable only.
     default_for = serializers.ListField(child=serializers.CharField())
     views = serializers.ListField(child=serializers.CharField())
 
