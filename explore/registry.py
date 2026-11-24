@@ -62,7 +62,7 @@ INDIVIDUAL_FIELDS = (
     ),
     RegistryField("original_filename", ANALYSIS),
     RegistryField("id_source", COMMON, default_for=ALL_GROUPS),
-    RegistryField("sample_collection", ANALYSIS, default_for=ALL_GROUPS),
+    RegistryField("sample_collection", COMMON, default_for=ALL_GROUPS),
     RegistryField("sample_code", COMMON),
     RegistryField("catch_date", COMMON),
     RegistryField("catch_year", COMMON, default_for=ALL_GROUPS),
