@@ -169,9 +169,6 @@ def estimate_summaries():
 def top_repunits():
     """Annotations for the TOP_N highest REPUNITS point estimates of each inventory:
     repunit_1, estimate_1, ..., repunit_3, estimate_3. NULL when there are fewer.
-
-    TODO (Frazer): replace the placeholders below with real subqueries.
-    Until then the endpoint works and every top-repunit column is blank.
     """
 
     repunit_results_ranked = Estimate.objects.filter(
