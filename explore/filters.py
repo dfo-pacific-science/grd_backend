@@ -63,6 +63,7 @@ class IndividualFilter(filters.FilterSet):
     pbt_brood_collection = CharInFilter(field_name="pbt__pbt_brood_collection")
     sex_id = CharInFilter(field_name="sex_id")
     fish_age = filters.RangeFilter(field_name="fish_age")
+    vial=filters.CharFilter(field_name="vial", lookup_expr="icontains")
 
     class Meta:
         model = Individual

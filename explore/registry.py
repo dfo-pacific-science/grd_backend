@@ -64,6 +64,8 @@ INDIVIDUAL_FIELDS = (
     RegistryField("id_source", COMMON, default_for=ALL_GROUPS),
     RegistryField("sample_collection", COMMON, default_for=ALL_GROUPS),
     RegistryField("sample_code", COMMON),
+    # Extraction sheet vial number(s); several are joined with "; " (see queries.py).
+    RegistryField("vial", COMMON, dictionary_term="Vial"),
     RegistryField("catch_date", COMMON),
     RegistryField("catch_year", COMMON, default_for=ALL_GROUPS),
     RegistryField(

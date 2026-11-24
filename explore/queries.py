@@ -1,10 +1,13 @@
 from django.db.models import Case, F, OuterRef, Subquery, When
 from django.db.models.fields.json import KeyTextTransform
 from django.db.models.functions import Extract
+from django.contrib.postgres.aggregates import StringAgg
+
 
 from grd.models import (
     BaselineCollection,
     Individual,
+    IndividualExtraction,
     IndividualInventory,
     IndividualRepunitResult,
 )
@@ -50,6 +53,22 @@ def individuals_per_fish():
         id=OuterRef("workbook__species_id"),
     ).values("value")[:1]
 
+    # The Vial key as text (->>). Used twice below: what to join and what to sort by.
+    vial_text = KeyTextTransform("Vial", "attributes")
+    vials = (
+        IndividualExtraction.objects.filter(individual=OuterRef("pk"))
+        # group individual extraction rows by individual so that only one row returned by a subquery
+        .values("individual")
+        .annotate(
+            # string aggregation because some fish have multiple vial numbers. Make a semicolon seperated list.
+            # ordering keeps the list the same on every request; with distinct=True,
+            # Postgres only allows ordering by the value being aggregated.
+            vials=StringAgg(vial_text, "; ", distinct=True, ordering=vial_text)
+        )
+        # only take the vials value for the annotation
+        .values("vials")
+    )
+
     return (
         # Single-row relations only: workbook (INNER JOIN) and pbt (LEFT OUTER
         # JOIN, GSI-only fish have no PBT row). Neither adds rows.
@@ -92,5 +111,6 @@ def individuals_per_fish():
             baseline_file=F("workbook__baseline_file"),
             # The repunits file name is stored in projects.attributes as {"repunits": "..."}.
             repunits_file=KeyTextTransform("repunits", "workbook__attributes"),
+            vial=Subquery(vials),
         )
     )
