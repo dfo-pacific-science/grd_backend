@@ -16,8 +16,8 @@ from grd_ref.models import SpeciesRef
 from grd_validation.models import MappedTerm
 
 from .field_metadata_stub import DICTIONARY_STUB
-from .filters import IndividualFilter
-from .queries import ID_SOURCE, individuals_per_fish
+from .filters import EstimateFilter, IndividualFilter
+from .queries import ID_SOURCE, TOP_N, estimate_summaries, individuals_per_fish
 from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH, default_terms
 from .serializers import IndividualFieldSerializer
 
@@ -275,3 +275,109 @@ class IndividualFieldsView(APIView):
                 }
             )
         return Response(IndividualFieldSerializer(field_dicts, many=True).data)
+
+
+# Stock proportion estimates (E5) ------------------------------------------------------
+
+ESTIMATE_SUMMARY_FIELDS = [
+    "id",
+    "workbook_id",
+    "original_filename",
+    "species",
+    "sample_collection",
+    "sample_code",
+    "pid",
+    "year",
+    "n_reported",
+    "n_failed",
+]
+
+
+def filtered_estimate_summaries(params):
+    """estimate_summaries() narrowed by EstimateFilter, or a 400 for a bad value."""
+    filterset = EstimateFilter(params, queryset=estimate_summaries())
+    if not filterset.is_valid():
+        raise ValidationError(filterset.errors)
+    return filterset.qs
+
+
+class EstimatesView(APIView):
+    """Compact estimates summary: one row per selected sample collection (5.2, 5.4, 5.7).
+
+    Requires ?species= and at least one of ?workbook= or ?sample_collection=, so a request
+    can never span species or the whole database. Rows are listed side by side and never
+    summed, averaged or recalculated. sd and credible intervals are never returned (5.3).
+    """
+
+    permission_classes = PERMISSION
+
+    def get(self, request):
+        params = request.query_params
+        errors = {}
+        if not params.get("species"):
+            errors["species"] = ["Select a species first."]
+        if not (params.get("workbook") or params.get("sample_collection")):
+            errors["selection"] = ["Select at least one workbook or sample collection."]
+        if errors:
+            raise ValidationError(errors)
+
+        top_fields = [f"{kind}_{n}" for n in range(1, TOP_N + 1) for kind in ("repunit", "estimate")]
+        rows = filtered_estimate_summaries(params).values(*ESTIMATE_SUMMARY_FIELDS, *top_fields)
+
+        results = []
+        for row in rows:
+            # Flat repunit_1/estimate_1 ... columns become one list, highest first. Missing
+            # ranks (fewer than TOP_N repunits, or no estimates at all) are left out.
+            top = [
+                {"repunit": row.pop(f"repunit_{n}"), "estimate": row.pop(f"estimate_{n}")}
+                for n in range(1, TOP_N + 1)
+            ]
+            row["top_repunits"] = [t for t in top if t["repunit"] is not None]
+            results.append(row)
+        return Response({"count": len(results), "results": results})
+
+
+class EstimateFilterOptionsView(APIView):
+    """Choices for the estimates query bar (5.1), faceted like the individuals filters.
+
+    species lists every species with inventories. workbook and sample_collection only list
+    choices for the selected species, each narrowed by the other selection.
+    """
+
+    permission_classes = PERMISSION
+
+    def get(self, request):
+        params = request.query_params
+
+        def facet(term):
+            """Inventories matching every active selection except term's own."""
+            others = params.copy()
+            others.pop(term, None)
+            return filtered_estimate_summaries(others)
+
+        species_ids = estimate_summaries().values("workbook__species_id")
+        options = {
+            "species": [
+                {"value": s.id, "label": s.value}
+                for s in SpeciesRef.objects.filter(id__in=species_ids).order_by("value")
+            ],
+            "workbook": [],
+            "sample_collection": [],
+        }
+        # No species yet: only the species list, so species are never mixed (5.1).
+        if params.get("species"):
+            options["workbook"] = [
+                {"value": wid, "label": name}
+                for wid, name in facet("workbook")
+                .values_list("workbook_id", "original_filename")
+                .distinct()
+                .order_by("original_filename")
+            ]
+            options["sample_collection"] = list(
+                facet("sample_collection")
+                .order_by()
+                .values_list("sample_collection", flat=True)
+                .distinct()
+                .order_by("sample_collection")
+            )
+        return Response(options)

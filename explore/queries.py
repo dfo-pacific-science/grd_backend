@@ -1,15 +1,25 @@
-from django.db.models import Case, F, OuterRef, Subquery, When
+from django.db.models import (
+    DecimalField,
+    F,
+    IntegerField,
+    OuterRef,
+    Subquery,
+    TextField,
+    Value,
+)
 from django.db.models.fields.json import KeyTextTransform
-from django.db.models.functions import Extract
+from django.db.models.functions import Cast, Extract, Trim
 from django.contrib.postgres.aggregates import StringAgg
 
 
 from grd.models import (
     BaselineCollection,
+    Estimate,
     Individual,
     IndividualExtraction,
     IndividualInventory,
     IndividualRepunitResult,
+    Inventory,
 )
 from grd_ref.models import SpeciesRef
 
@@ -114,3 +124,64 @@ def individuals_per_fish():
             vial=Subquery(vials),
         )
     )
+
+
+# Stock proportion estimates (E5). Only REPUNITS estimates feed the summary (5.2).
+ESTIMATES_TYPE = "REPUNITS"
+# How many repunits the compact summary shows per sample collection (open question 12).
+TOP_N = 3
+
+
+def int_attribute(key):
+    """An inventories.attributes value as an integer. Values are text, some with
+    leading spaces (" 8"), so trim before casting. All 336 rows are numeric today."""
+    return Cast(Trim(KeyTextTransform(key, "attributes")), IntegerField())
+
+
+def estimate_summaries():
+    """One row per sample collection (inventory) for the estimates summary (5.2, 5.4).
+
+    Rows are never combined: the same sample collection analysed in two workbooks is two
+    inventories, so two rows. The point estimates are percentages (each collection sums to 100).
+    """
+    species_name = SpeciesRef.objects.filter(
+        id=OuterRef("workbook__species_id"),
+    ).values("value")[:1]
+
+    return (
+        Inventory.objects.select_related("workbook")
+        .annotate(
+            original_filename=F("workbook__original_filename"),
+            species=Subquery(species_name),
+            pid=KeyTextTransform("PID", "attributes"),
+            # Text on purpose: one inventory has the year "2023-2024".
+            year=KeyTextTransform("Year", "attributes"),
+            # 5.4: the workbook's "Reported(filtered)", e.g. 57(1), is stored as two keys.
+            n_reported=int_attribute("N_reported"),
+            n_failed=int_attribute("N_filtered"),
+        )
+        .annotate(**top_repunits())
+        .order_by("original_filename", "sample_collection", "id")
+    )
+
+
+
+def top_repunits():
+    """Annotations for the TOP_N highest REPUNITS point estimates of each inventory:
+    repunit_1, estimate_1, ..., repunit_3, estimate_3. NULL when there are fewer.
+
+    TODO (Frazer): replace the placeholders below with real subqueries.
+    Until then the endpoint works and every top-repunit column is blank.
+    """
+
+    repunit_results_ranked = Estimate.objects.filter(
+        inventory=OuterRef("pk"),
+        estimates_type=ESTIMATES_TYPE,
+        point_estimate__gt=0
+    ).order_by(F("point_estimate").desc(nulls_last=True), "repunit")
+
+    annotations = {}
+    for n in range(1, TOP_N + 1):
+        annotations[f"repunit_{n}"] = Subquery(repunit_results_ranked.values("repunit")[n-1: n])
+        annotations[f"estimate_{n}"] = Subquery(repunit_results_ranked.values("point_estimate")[n-1:n])
+    return annotations

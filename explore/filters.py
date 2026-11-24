@@ -1,6 +1,6 @@
 import django_filters as filters
 
-from grd.models import Individual
+from grd.models import Individual, Inventory
 
 from .queries import ID_SOURCE
 
@@ -69,4 +69,21 @@ class IndividualFilter(filters.FilterSet):
         model = Individual
         # Every filter is declared above. Param names are registry terms, except the
         # filter-only ones (catch_jd, date_run, baseline_file, repunits_file).
+        fields = []
+
+
+class EstimateFilter(filters.FilterSet):
+    """Filters for the stock proportion estimates summary (5.1, 5.7). Rows are inventories.
+
+    species is a single value on purpose: species are never mixed (5.1). The view also
+    requires species plus at least one workbook or sample collection, and combines the
+    two with AND (a workbook narrows the sample collections).
+    """
+
+    species = filters.NumberFilter(field_name="workbook__species_id")
+    workbook = NumberInFilter(field_name="workbook")
+    sample_collection = CharInFilter(field_name="sample_collection")
+
+    class Meta:
+        model = Inventory
         fields = []
