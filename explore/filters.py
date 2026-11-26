@@ -57,13 +57,15 @@ class IndividualFilter(filters.FilterSet):
     repunit = CharInFilter(field_name="repunit")
     probability = filters.RangeFilter(field_name="probability")
     top_collection = CharInFilter(field_name="top_collection")
-    top_collection_probability = filters.RangeFilter(field_name="top_collection_probability")
+    top_collection_probability = filters.RangeFilter(
+        field_name="top_collection_probability"
+    )
     cu = CharInFilter(field_name="cu")
     pbt_brood_year = filters.RangeFilter(field_name="pbt__pbt_brood_year")
     pbt_brood_collection = CharInFilter(field_name="pbt__pbt_brood_collection")
     sex_id = CharInFilter(field_name="sex_id")
     fish_age = filters.RangeFilter(field_name="fish_age")
-    vial=filters.CharFilter(field_name="vial", lookup_expr="icontains")
+    vial = filters.CharFilter(field_name="vial", lookup_expr="icontains")
 
     class Meta:
         model = Individual
@@ -83,6 +85,14 @@ class EstimateFilter(filters.FilterSet):
     species = filters.NumberFilter(field_name="workbook__species_id")
     workbook = NumberInFilter(field_name="workbook")
     sample_collection = CharInFilter(field_name="sample_collection")
+    pid = filters.CharFilter(field_name="pid", lookup_expr="icontains")
+    year_min = filters.CharFilter(field_name="year", lookup_expr="gte")
+    year_max = filters.CharFilter(field_name="year", lookup_expr="lte")
+    sample_code = CharInFilter(field_name="sample_code")
+    n_failed_min = filters.NumberFilter(field_name="n_failed", lookup_expr="gte")
+    n_failed_max = filters.NumberFilter(field_name="n_failed", lookup_expr="lte")
+    n_reported_min = filters.NumberFilter(field_name="n_reported", lookup_expr="gte")
+    n_reported_max = filters.NumberFilter(field_name="n_reported", lookup_expr="lte")
 
     class Meta:
         model = Inventory

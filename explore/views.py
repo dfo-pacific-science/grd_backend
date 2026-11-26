@@ -17,7 +17,7 @@ from grd_validation.models import MappedTerm
 
 from .field_metadata_stub import DICTIONARY_STUB
 from .filters import EstimateFilter, IndividualFilter
-from .queries import ID_SOURCE, TOP_N, estimate_summaries, individuals_per_fish
+from .queries import ID_SOURCE, TOP_N, estimate_summaries, individuals_per_fish, workbooks
 from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH, default_terms
 from .serializers import IndividualFieldSerializer
 
@@ -277,6 +277,35 @@ class IndividualFieldsView(APIView):
         return Response(IndividualFieldSerializer(field_dicts, many=True).data)
 
 
+# Workbooks (2.5) ----------------------------------------------------------------------
+
+# Columns of the Workbooks list, in display order. Each name must be a model field or an
+# annotation in workbooks(); .values() raises an error for anything else.
+WORKBOOK_FIELDS = [
+    "id",
+    "original_filename",
+    "date_run",
+    "ingestion_date",
+    "pipeline_version",
+    "baseline_file",
+    # TODO (Frazer): add each annotation from workbooks() here as you write it.
+]
+
+
+class WorkbooksView(APIView):
+    """Every workbook, one row each, unpaginated (2.5).
+
+    Small table (31 rows), so the frontend does search, sort and filtering in the browser.
+    Shape matches the estimates endpoint: {count, results}.
+    """
+
+    permission_classes = PERMISSION
+
+    def get(self, request):
+        rows = list(workbooks().values(*WORKBOOK_FIELDS))
+        return Response({"count": len(rows), "results": rows})
+
+
 # Stock proportion estimates (E5) ------------------------------------------------------
 
 ESTIMATE_SUMMARY_FIELDS = [
@@ -346,8 +375,17 @@ class EstimateFilterOptionsView(APIView):
 
     permission_classes = PERMISSION
 
+    # Filters whose options are the distinct values of an estimate_summaries() annotation.
+    # pid, year and the counts are typed (contains match or From/To), so they have no list.
+    DISTINCT_TERMS = ["sample_collection", "sample_code"]
+
     def get(self, request):
         params = request.query_params
+        # Validate once up front, so a bad value (year_min=abc is fine as text, but
+        # n_reported_min=abc is not) gets a 400 instead of being silently dropped.
+        check = EstimateFilter(params, queryset=estimate_summaries())
+        if not check.is_valid():
+            raise ValidationError(check.errors)
 
         def facet(term):
             """Inventories matching every active selection except term's own."""
@@ -362,7 +400,8 @@ class EstimateFilterOptionsView(APIView):
                 for s in SpeciesRef.objects.filter(id__in=species_ids).order_by("value")
             ],
             "workbook": [],
-            "sample_collection": [],
+            # Same keys before and after a species is picked, so the frontend type always holds.
+            **{term: [] for term in self.DISTINCT_TERMS},
         }
         # No species yet: only the species list, so species are never mixed (5.1).
         if params.get("species"):
@@ -373,11 +412,14 @@ class EstimateFilterOptionsView(APIView):
                 .distinct()
                 .order_by("original_filename")
             ]
-            options["sample_collection"] = list(
-                facet("sample_collection")
-                .order_by()
-                .values_list("sample_collection", flat=True)
-                .distinct()
-                .order_by("sample_collection")
-            )
+            for term in self.DISTINCT_TERMS:
+                options[term] = list(
+                    facet(term)
+                    # Blank sample codes would show as an empty choice.
+                    .exclude(**{f"{term}__isnull": True})
+                    .order_by()
+                    .values_list(term, flat=True)
+                    .distinct()
+                    .order_by(term)
+                )
         return Response(options)
