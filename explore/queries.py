@@ -1,4 +1,5 @@
 from django.db.models import (
+    Count,
     DecimalField,
     F,
     IntegerField,
@@ -136,23 +137,20 @@ def workbooks():
 
     31 workbooks today, so the view returns them all and the frontend searches and sorts.
     """
-    # TODO (Frazer) 1: species name. Workbook.species_id is a plain integer, not a ForeignKey,
-    # so look the name up in SpeciesRef with a Subquery. Copy species_name from
-    # estimate_summaries(), then ask: what is the outer row here, and so what should
-    # OuterRef point at?
+    species_name = SpeciesRef.objects.filter(
+        id=OuterRef("species_id")
+    ).values("value")[:1]
 
     return (
         Workbook.objects
-        # TODO (Frazer) 2: .annotate(...) with
-        #   species             the Subquery from TODO 1
-        #   repunits_file       attributes key "repunits"
-        #   min_snp_count       attributes key "minimum_indiv_SNP_count"
-        #   granularity         attributes key "max_granularity_level"
-        #   credible_interval   attributes key "credible_interval"
-        # Keys are case-sensitive. Leave out git_commit, custom_rollup and smoke.
-        #
-        # TODO (Frazer) 3 (optional): n_collections, the number of inventories per workbook.
-        # Hint: Count over the related_name on Inventory.workbook.
+        .annotate(
+            species=Subquery(species_name),
+            repunits_file=KeyTextTransform("repunits", "attributes"),
+            min_snp_count=KeyTextTransform("minimum_indiv_SNP_count", "attributes"),
+            granularity=KeyTextTransform("max_granularity_level", "attributes"),
+            credible_interval=KeyTextTransform("credible_interval", "attributes"),
+            n_inventories=Count("inventories"),
+        )
         .order_by("original_filename")
     )
 

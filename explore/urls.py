@@ -10,5 +10,6 @@ urlpatterns = [
     path("individuals/", views.IndividualsView.as_view(), name="individuals"),
     path("estimates/filter-options/", views.EstimateFilterOptionsView.as_view(), name="estimate-filter-options"),
     path("estimates/", views.EstimatesView.as_view(), name="estimates"),
+    path("workbooks/", views.WorkbooksView.as_view(), name="workbooks"),
 ]
 

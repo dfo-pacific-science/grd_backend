@@ -17,7 +17,13 @@ from grd_validation.models import MappedTerm
 
 from .field_metadata_stub import DICTIONARY_STUB
 from .filters import EstimateFilter, IndividualFilter
-from .queries import ID_SOURCE, TOP_N, estimate_summaries, individuals_per_fish, workbooks
+from .queries import (
+    ID_SOURCE,
+    TOP_N,
+    estimate_summaries,
+    individuals_per_fish,
+    workbooks,
+)
 from .registry import FIELDS_BY_TERM, INDIVIDUAL_FIELDS, PER_FISH, default_terms
 from .serializers import IndividualFieldSerializer
 
@@ -288,7 +294,12 @@ WORKBOOK_FIELDS = [
     "ingestion_date",
     "pipeline_version",
     "baseline_file",
-    # TODO (Frazer): add each annotation from workbooks() here as you write it.
+    "species",
+    "n_inventories",
+    "repunits_file",
+    "min_snp_count",
+    "granularity",
+    "credible_interval",
 ]
 
 
@@ -312,13 +323,6 @@ ESTIMATE_SUMMARY_FIELDS = [
     "id",
     "workbook_id",
     "original_filename",
-    "species",
-    "sample_collection",
-    "sample_code",
-    "pid",
-    "year",
-    "n_reported",
-    "n_failed",
 ]
 
 
@@ -350,15 +354,24 @@ class EstimatesView(APIView):
         if errors:
             raise ValidationError(errors)
 
-        top_fields = [f"{kind}_{n}" for n in range(1, TOP_N + 1) for kind in ("repunit", "estimate")]
-        rows = filtered_estimate_summaries(params).values(*ESTIMATE_SUMMARY_FIELDS, *top_fields)
+        top_fields = [
+            f"{kind}_{n}"
+            for n in range(1, TOP_N + 1)
+            for kind in ("repunit", "estimate")
+        ]
+        rows = filtered_estimate_summaries(params).values(
+            *ESTIMATE_SUMMARY_FIELDS, *top_fields
+        )
 
         results = []
         for row in rows:
             # Flat repunit_1/estimate_1 ... columns become one list, highest first. Missing
             # ranks (fewer than TOP_N repunits, or no estimates at all) are left out.
             top = [
-                {"repunit": row.pop(f"repunit_{n}"), "estimate": row.pop(f"estimate_{n}")}
+                {
+                    "repunit": row.pop(f"repunit_{n}"),
+                    "estimate": row.pop(f"estimate_{n}"),
+                }
                 for n in range(1, TOP_N + 1)
             ]
             row["top_repunits"] = [t for t in top if t["repunit"] is not None]
