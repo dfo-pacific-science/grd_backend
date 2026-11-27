@@ -323,6 +323,13 @@ ESTIMATE_SUMMARY_FIELDS = [
     "id",
     "workbook_id",
     "original_filename",
+    "species",
+    "sample_collection",
+    "sample_code",
+    "pid",
+    "year",
+    "n_reported",
+    "n_failed",
 ]
 
 
